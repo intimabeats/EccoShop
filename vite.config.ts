@@ -18,12 +18,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       host: true,
-      proxy: { // Adicione o proxy aqui
+      proxy: {
         '/abacatepay': {
           target: 'https://api.abacatepay.com',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/abacatepay/, '/v1'), // Reescreve o caminho
-          secure: false, // Se a API do AbacatePay usar HTTPS (o que é provável), mantenha como true
+          rewrite: (path) => path.replace(/^\/abacatepay/, '/v1'),
+          secure: true, // Corrected to true
         },
       },
     },
@@ -34,4 +34,3 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
-

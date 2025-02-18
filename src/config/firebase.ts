@@ -12,6 +12,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator, Functions } from 'firebase/functions'; // Import
 import { env } from './env';
 
 const firebaseConfig = {
@@ -27,7 +28,7 @@ const firebaseConfig = {
 console.log('Firebase config:', firebaseConfig);
 
 // Inicialização do app Firebase
-let app, auth: Auth, db: Firestore, storage: FirebaseStorage;
+let app, auth: Auth, db: Firestore, storage: FirebaseStorage, functions: Functions; //Type
 try {
     app = initializeApp(firebaseConfig);
     console.log('Firebase app initialized successfully.');
@@ -49,6 +50,12 @@ try {
     storage = getStorage(app);
     console.log('Firebase storage initialized successfully.');
 
+    functions = getFunctions(app);
+    // Use emulators in development
+    if (env.app.env === 'development') {
+      connectFunctionsEmulator(functions, "localhost", 5001); // Default port for Functions Emulator
+    }
+
 } catch (error) {
     console.error('Error initializing Firebase:', error);
     // Adicione tratamento de erro mais robusto aqui, se necessário
@@ -66,4 +73,4 @@ export const checkNetworkConnection = async () => {
   }
 };
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, functions }; // Export functions

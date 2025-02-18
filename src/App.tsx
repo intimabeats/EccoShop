@@ -6,7 +6,7 @@ import {
   CircularProgress, 
   Box, 
   Typography, 
-  Alert 
+  Alert,
 } from '@mui/material';
 
 // Import theme and providers

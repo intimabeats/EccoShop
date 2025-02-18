@@ -8,9 +8,11 @@ const env = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
   },
-  abacatePay: {
-    apiKey: import.meta.env.VITE_ABACATE_PAY_API_KEY || 'abc_dev_YbKKCjdDYEEERyTFFPRSkjty',
-    apiUrl: import.meta.env.VITE_ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1',
+  stripe: {
+    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
+  },
+  google: {
+    mapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY, // Add Google Maps API key
   },
   app: {
     name: import.meta.env.VITE_APP_NAME,

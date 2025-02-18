@@ -9,20 +9,28 @@ import {
   Step,
   StepLabel,
   styled,
-  CircularProgress,
   Alert,
   Checkbox,
   FormControlLabel,
   Link,
 } from '@mui/material';
 import { useCart } from '../Cart/CartContext';
-import { abacatePayService } from '../../services/abacatePay';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebase';
-import { CheckoutLogin } from './CheckoutLogin';
+import { auth, db, functions } from '../../config/firebase';
+// Removed: import { CheckoutLogin } from './CheckoutLogin';  // No longer used
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { env } from '../../config/env';
+import { httpsCallable } from 'firebase/functions';
+import { AddressAutocomplete } from './AddressAutocomplete';
 
 const StyledForm = styled('form')(({ theme }) => ({
   maxWidth: 600,
@@ -33,18 +41,28 @@ const StyledForm = styled('form')(({ theme }) => ({
   },
 }));
 
-const steps = ['Dados Pessoais', 'Endereço', 'Pagamento'];
+const steps = ['Dados Pessoais e Endereço', 'Pagamento'];
+
+const stripePromise = loadStripe(env.stripe.publishableKey);
+
+interface AddressComponents {
+  street_number?: string;
+  route?: string;
+  neighborhood?: string;
+  locality?: string;
+  administrative_area_level_1?: string;
+  postal_code?: string;
+  country?: string;
+}
 
 const CheckoutForm: React.FC = () => {
-  const { state: cartState, clearCart } = useCart();
+  const { state: cartState } = useCart(); // Removed clearCart from here
   const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Estado para login e criação de conta
-  const [showLogin, setShowLogin] = useState(false);
   const [createAccount, setCreateAccount] = useState(false);
   const [accountPassword, setAccountPassword] = useState({
     password: '',
@@ -64,22 +82,76 @@ const CheckoutForm: React.FC = () => {
       city: '',
       state: '',
       zipCode: '',
+      country: '',
     },
   });
 
-  // Preencher dados do usuário automaticamente se estiver logado
+  const extractAddressComponents = (
+    place: google.maps.places.PlaceResult
+  ): AddressComponents => {
+    const components: AddressComponents = {};
+    if (!place.address_components) {
+      return components;
+    }
+
+    for (const component of place.address_components) {
+      const type = component.types[0];
+      switch (type) {
+        case 'street_number':
+          components.street_number = component.long_name;
+          break;
+        case 'route':
+          components.route = component.long_name;
+          break;
+        case 'neighborhood':
+        case 'sublocality_level_1':
+          components.neighborhood = component.long_name;
+          break;
+        case 'locality':
+          components.locality = component.long_name;
+          break;
+        case 'administrative_area_level_1':
+          components.administrative_area_level_1 = component.short_name;
+          break;
+        case 'postal_code':
+          components.postal_code = component.long_name;
+          break;
+        case 'country':
+          components.country = component.long_name;
+          break;
+      }
+    }
+    return components;
+  };
+
+  const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
+    const addressComponents = extractAddressComponents(place);
+
+    setFormData((prev) => ({
+      ...prev,
+      address: {
+        street: `${addressComponents.route || ''}`,
+        number: addressComponents.street_number || '',
+        complement: '',
+        neighborhood: addressComponents.neighborhood || '',
+        city: addressComponents.locality || '',
+        state: addressComponents.administrative_area_level_1 || '',
+        zipCode: addressComponents.postal_code || '',
+        country: addressComponents.country || '',
+      },
+    }));
+  };
+
   useEffect(() => {
     if (user) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         name: user.displayName || '',
         email: user.email || '',
       }));
-      setShowLogin(false);
     }
   }, [user]);
 
-  // Verificar se o carrinho está vazio
   useEffect(() => {
     if (cartState.items.length === 0) {
       navigate('/');
@@ -88,8 +160,7 @@ const CheckoutForm: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
-    // Formatação de telefone
+
     const formatPhone = (phone: string) => {
       const cleaned = phone.replace(/\D/g, '');
       const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
@@ -99,7 +170,6 @@ const CheckoutForm: React.FC = () => {
       return phone;
     };
 
-    // Formatação de CEP
     const formatZipCode = (zipCode: string) => {
       const cleaned = zipCode.replace(/\D/g, '');
       const match = cleaned.match(/^(\d{5})(\d{3})$/);
@@ -119,20 +189,20 @@ const CheckoutForm: React.FC = () => {
 
     if (name.includes('.')) {
       const [, child] = name.split('.');
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         address: {
           ...prev.address,
-          [child]: formattedValue
-        }
+          [child]: formattedValue,
+        },
       }));
     } else if (name === 'password' || name === 'confirmPassword') {
-      setAccountPassword(prev => ({
+      setAccountPassword((prev) => ({
         ...prev,
-        [name]: formattedValue
+        [name]: formattedValue,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: formattedValue,
       }));
@@ -143,12 +213,12 @@ const CheckoutForm: React.FC = () => {
     if (activeStep === 0 && !user && createAccount) {
       handleCreateAccount();
     } else {
-      setActiveStep(prev => prev + 1);
+      setActiveStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
-    setActiveStep(prev => prev - 1);
+    setActiveStep((prev) => prev - 1);
   };
 
   const handleCreateAccount = async () => {
@@ -165,13 +235,12 @@ const CheckoutForm: React.FC = () => {
     try {
       setLoading(true);
       const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        formData.email, 
+        auth,
+        formData.email,
         accountPassword.password
       );
       const newUser = userCredential.user;
 
-      // Salvar informações adicionais no Firestore
       await setDoc(doc(db, 'users', newUser.uid), {
         name: formData.name,
         email: formData.email,
@@ -181,12 +250,11 @@ const CheckoutForm: React.FC = () => {
         createdAt: new Date(),
       });
 
-      // Opcional: atualizar perfil do usuário
       if (newUser) {
         await newUser.reload();
       }
-      
-      setActiveStep(prev => prev + 1);
+
+      setActiveStep((prev) => prev + 1);
     } catch (error) {
       console.error('Erro ao criar conta:', error);
       setError('Erro ao criar conta. Tente novamente.');
@@ -197,69 +265,10 @@ const CheckoutForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Se não estiver logado, mostrar tela de login
-    if (!user) {
-      setShowLogin(true);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Criar cobrança
-      const cartItems = cartState.items.map(item => ({
-        externalId: String(item.product.id), 
-        name: String(item.product.name),
-        description: String(item.product.description || ''),
-        quantity: Number(item.quantity),
-        price: Number(item.product.price)
-      }));
-
-      const billing = await abacatePayService.createBilling({
-        frequency: 'ONE_TIME',
-        methods: ['PIX'],
-        products: cartItems,
-        returnUrl: `${window.location.origin}/cart`,
-        completionUrl: `${window.location.origin}/success`,
-        customer: {
-          name: String(formData.name),
-          email: String(formData.email),
-          cellphone: String(formData.phone),
-          taxId: String(formData.taxId),
-        },
-      });
-
-      if (billing.url) {
-        window.location.href = billing.url;
-      } else {
-        throw new Error('Nenhuma URL de pagamento recebida');
-      }
-
-      clearCart();
-    } catch (error) {
-      console.error('Checkout error:', error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido no checkout');
-    } finally {
-      setLoading(false);
-    }
+    // setActiveStep(prev => prev + 1); // Removed
   };
 
-  // Se estiver na tela de login
-  if (showLogin) {
-    return (
-      <CheckoutLogin 
-        onLoginSuccess={() => {
-          setShowLogin(false);
-        }}
-        onCreateAccount={() => {
-          setShowLogin(false);
-          setCreateAccount(true);
-        }}
-      />
-    );
-  }
+  // Removed the createPaymentIntent function here
 
   const renderStepContent = (step: number) => {
     switch (step) {
@@ -267,17 +276,16 @@ const CheckoutForm: React.FC = () => {
         return (
           <Stack spacing={3}>
             {!user && (
-              <Box sx={{ 
-                backgroundColor: 'rgba(0,0,0,0.05)', 
-                p: 2, 
-                borderRadius: 2 
-              }}>
+              <Box
+                sx={{
+                  backgroundColor: 'rgba(0,0,0,0.05)',
+                  p: 2,
+                  borderRadius: 2,
+                }}
+              >
                 <Typography variant="body2" gutterBottom>
-                  Já possui conta? 
-                  <Link 
-                    href="/login" 
-                    sx={{ ml: 1 }}
-                  >
+                  Já possui conta?
+                  <Link href="/login" sx={{ ml: 1 }}>
                     Fazer login
                   </Link>
                 </Typography>
@@ -318,6 +326,19 @@ const CheckoutForm: React.FC = () => {
               label="CPF/CNPJ"
               name="taxId"
               value={formData.taxId}
+              onChange={handleInputChange}
+            />
+
+            <AddressAutocomplete
+              onAddressSelect={handleAddressSelect}
+              defaultValue={`${formData.address.street}, ${formData.address.number} - ${formData.address.neighborhood}, ${formData.address.city} - ${formData.address.state}, ${formData.address.zipCode}`}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Complemento"
+              name="address.complement"
+              value={formData.address.complement}
               onChange={handleInputChange}
             />
 
@@ -362,98 +383,9 @@ const CheckoutForm: React.FC = () => {
         );
       case 1:
         return (
-          <Stack spacing={3}>
-            <TextField
-              required
-              fullWidth
-              label="CEP"
-              name="address.zipCode"
-              value={formData.address.zipCode}
-              onChange={handleInputChange}
-              placeholder="99999-999"
-            />
-            <TextField
-              required
-              fullWidth
-              label="Rua"
-              name="address.street"
-              value={formData.address.street}
-              onChange={handleInputChange}
-            />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                required
-                fullWidth
-                label="Número"
-                name="address.number"
-                value={formData.address.number}
-                onChange={handleInputChange}
-              />
-              <TextField
-                fullWidth
-                label="Complemento"
-                name="address.complement"
-                value={formData.address.complement}
-                onChange={handleInputChange}
-              />
-            </Box>
-            <TextField
-              required
-              fullWidth
-              label="Bairro"
-              name="address.neighborhood"
-              value={formData.address.neighborhood}
-              onChange={handleInputChange}
-            />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                required
-                fullWidth
-                label="Cidade"
-                name="address.city"
-                value={formData.address.city}
-                onChange={handleInputChange}
-              />
-              <TextField
-                required
-                fullWidth
-                label="Estado"
-                name="address.state"
-                value={formData.address.state}
-                onChange={handleInputChange}
-              />
-            </Box>
-          </Stack>
-        );
-      case 2:
-        return (
-          <Stack spacing={3}>
-            <Typography variant="h6">Resumo do Pedido</Typography>
-            {cartState.items.map(item => (
-              <Box key={item.product.id} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography>
-                  {item.product.name} x {item.quantity}
-                </Typography>
-                <Typography>
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  }).format(item.product.price * item.quantity / 100)}
-                </Typography>
-              </Box>
-            ))}
-            <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2, mt: 2 }}>
-              <Typography variant="h6" sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Total</span>
-                <span>
-                  {new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  }).format(cartState.total / 100)}
-                </span>
-              </Typography>
-            </Box>
-          </Stack>
+          <Elements stripe={stripePromise}>
+            <PaymentForm />
+          </Elements>
         );
       default:
         return null;
@@ -463,7 +395,7 @@ const CheckoutForm: React.FC = () => {
   return (
     <StyledForm onSubmit={handleSubmit}>
       <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-        {steps.map(label => (
+        {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
           </Step>
@@ -479,32 +411,109 @@ const CheckoutForm: React.FC = () => {
       {renderStepContent(activeStep)}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-        <Button
-          disabled={activeStep === 0 || loading}
-          onClick={handleBack}
-        >
+        <Button disabled={activeStep === 0 || loading} onClick={handleBack}>
           Voltar
         </Button>
-        {activeStep === steps.length - 1 ? (
-          <Button
-            variant="contained"
-            type="submit"
-            disabled={loading}
-            startIcon={loading && <CircularProgress size={20} />}
-          >
-            Finalizar Compra
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={loading}
-          >
+        {activeStep === steps.length - 1 ? null : (
+          <Button variant="contained" onClick={handleNext} disabled={loading}>
             Próximo
           </Button>
         )}
       </Box>
     </StyledForm>
+  );
+};
+
+const PaymentForm: React.FC = () => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { state: cartState, clearCart } = useCart(); // Moved clearCart here
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const createPaymentIntentFunction = httpsCallable(functions, 'createPaymentIntent');
+      const result = await createPaymentIntentFunction({
+          items: cartState.items.map(item => ({
+              id: item.product.id,
+              quantity: item.quantity,
+          })),
+          total: cartState.total,
+          name: formData.name,
+          email: formData.email,
+          address: formData.address
+      });
+
+      const data = result.data as { clientSecret: string };
+      const clientSecret = data.clientSecret;
+
+      if (!clientSecret) return;
+
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) return;
+
+      const { paymentIntent, error: confirmError } =
+        await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+          },
+        });
+
+      if (confirmError) {
+        setError(confirmError.message || 'An unknown error occurred'); // Fallback message
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        clearCart(); // Clear cart on success
+        navigate('/success');
+      }
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'An unexpected error occurred.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <CardElement
+        options={{
+          style: {
+            base: {
+              fontSize: '16px',
+              color: '#424770',
+              '::placeholder': {
+                color: '#aab7c4',
+              },
+            },
+            invalid: {
+              color: '#9e2146',
+            },
+          },
+        }}
+      />
+      <Button
+        type="submit"
+        disabled={!stripe || loading}
+        variant="contained"
+        sx={{ mt: 2 }}
+        fullWidth
+      >
+        {loading ? 'Processando...' : 'Pagar'}
+      </Button>
+      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+    </form>
   );
 };
 

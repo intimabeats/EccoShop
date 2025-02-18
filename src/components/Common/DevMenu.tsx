@@ -11,13 +11,12 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  ShoppingCart as CartIcon,
   Store as StoreIcon,
-  Payment as PaymentIcon,
+  ShoppingCart as CartIcon,
   AdminPanelSettings as AdminIcon,
   Login as LoginIcon,
   CheckCircle as SuccessIcon,
+  Payment as PaymentIcon, // Import PaymentIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 

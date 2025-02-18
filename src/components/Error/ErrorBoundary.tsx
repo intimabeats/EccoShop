@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Box, Button, Container, Typography } from '@mui/material';
 import { ErrorOutline as ErrorIcon } from '@mui/icons-material';
 
@@ -49,11 +49,11 @@ export class ErrorBoundary extends Component<Props, State> {
             }}
           >
             <ErrorIcon sx={{ fontSize: 64, color: 'error.main' }} />
-            
+
             <Typography variant="h4" component="h1" gutterBottom>
               Ops! Algo deu errado
             </Typography>
-            
+
             <Typography color="text.secondary" paragraph>
               Desculpe pelo inconveniente. Por favor, tente novamente mais tarde.
             </Typography>

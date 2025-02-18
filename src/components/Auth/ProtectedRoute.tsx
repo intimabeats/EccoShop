@@ -11,9 +11,9 @@ interface ProtectedRouteProps {
   adminOnly?: boolean;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  adminOnly = false 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  adminOnly = false
 }) => {
   const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -46,10 +46,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Tela de carregamento
   if (authLoading || loading) {
     return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
         height="100vh"
       >
         <CircularProgress />

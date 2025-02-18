@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import {
   Store as StoreIcon,
-  ShoppingCart as CartIcon,
   Inventory as InventoryIcon,
   Receipt as OrdersIcon,
 } from '@mui/icons-material';

@@ -8,10 +8,9 @@ import {
   MenuItem,
   Skeleton,
   useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Product } from '../../types';
 import { ProductCard } from './ProductCard';
@@ -24,7 +23,6 @@ const ProductList: React.FC = () => {
   const [category, setCategory] = useState('all');
   const { addItem } = useCart();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [categories, setCategories] = useState<string[]>([]);
 

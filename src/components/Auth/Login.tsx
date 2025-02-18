@@ -11,9 +11,8 @@ import {
   Snackbar,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
+import {
+  createUserWithEmailAndPassword,
   AuthError
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -27,7 +26,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [networkError, setNetworkError] = useState(false);
-  
+
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -160,7 +159,7 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            
+
             <TextField
               margin="normal"
               required
@@ -180,8 +179,8 @@ const Login: React.FC = () => {
               disabled={loading}
               sx={{ mt: 3, mb: 2 }}
             >
-              {loading 
-                ? (isRegistering ? 'Registrando...' : 'Entrando...') 
+              {loading
+                ? (isRegistering ? 'Registrando...' : 'Entrando...')
                 : (isRegistering ? 'Registrar' : 'Entrar')
               }
             </Button>
@@ -196,8 +195,8 @@ const Login: React.FC = () => {
                 }}
                 type="button"
               >
-                {isRegistering 
-                  ? 'Já tem uma conta? Faça login' 
+                {isRegistering
+                  ? 'Já tem uma conta? Faça login'
                   : 'Registrar nova conta de admin'
                 }
               </Link>

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User, 
-  signInWithEmailAndPassword, 
+import {
+  User,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   AuthError
@@ -25,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
-      auth, 
+      auth,
       (user) => {
         setUser(user);
         setLoading(false);
@@ -44,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setError(null);
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
+      await auth.signInWithEmailAndPassword(email, password); // Use directly from the auth object
     } catch (error) {
       const authError = error as AuthError;
       console.error('Sign in error:', authError);

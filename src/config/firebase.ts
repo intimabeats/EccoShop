@@ -1,17 +1,19 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
+import {
+  getAuth,
   initializeAuth,
   browserLocalPersistence,
-  browserPopupRedirectResolver
+  browserPopupRedirectResolver,
+  Auth,
 } from 'firebase/auth';
-import { 
-  getFirestore, 
+import {
+  getFirestore,
   initializeFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager
+  persistentMultipleTabManager,
+  Firestore,
 } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { env } from './env';
 
 const firebaseConfig = {
@@ -24,22 +26,34 @@ const firebaseConfig = {
   measurementId: env.firebase.measurementId
 };
 
+console.log('Firebase config:', firebaseConfig);
+
 // Inicialização do app Firebase
-const app = initializeApp(firebaseConfig);
+let app, auth: Auth, db: Firestore, storage: FirebaseStorage;
+try {
+    app = initializeApp(firebaseConfig);
+    console.log('Firebase app initialized successfully.');
 
-// Configuração de persistência
-const auth = initializeAuth(app, {
-  persistence: browserLocalPersistence,
-  popupRedirectResolver: browserPopupRedirectResolver
-});
+    // Configuração de persistência
+    auth = initializeAuth(app, {
+      persistence: browserLocalPersistence,
+      popupRedirectResolver: browserPopupRedirectResolver
+    });
+    console.log('Firebase auth initialized successfully.');
 
-const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-});
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+    console.log('Firestore initialized successfully.');
 
-const storage = getStorage(app);
+    storage = getStorage(app);
+    console.log('Firebase storage initialized successfully.');
+
+} catch (error) {
+    console.error('Error initializing Firebase:', error);
+}
 
 // Função de verificação de rede
 export const checkNetworkConnection = async () => {

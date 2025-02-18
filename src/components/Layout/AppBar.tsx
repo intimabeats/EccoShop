@@ -1,15 +1,9 @@
 import React from 'react';
 import {
   AppBar as MuiAppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Box,
-  useTheme,
-  useMediaQuery,
   styled,
 } from '@mui/material';
-import { Menu as MenuIcon, ShoppingCart as CartIcon } from '@mui/icons-material';
+import { ShoppingCart as CartIcon } from '@mui/icons-material';
 
 export interface AppBarProps {
   onMenuClick: () => void;
@@ -26,10 +20,10 @@ const StyledAppBar = styled(MuiAppBar)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-export const AppBar: React.FC<AppBarProps> = ({ 
-  onMenuClick, 
-  onCartClick, 
-  cartItemsCount 
+export const AppBar: React.FC<AppBarProps> = ({
+  onMenuClick,
+  onCartClick,
+  cartItemsCount
 }) => {
-  // Rest of the component implementation...
+    return null; // Adicionei um retorno temporário
 };

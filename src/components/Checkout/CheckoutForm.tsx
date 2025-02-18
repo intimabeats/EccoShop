@@ -47,15 +47,16 @@ const CheckoutForm: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev],
-          [child]: value,
-        },
-      }));
+     const [parent, child] = name.split('.');
+
+    if (child) {
+        setFormData(prev => ({
+            ...prev,
+            address: {
+                ...prev.address,
+                [child]: value
+            }
+        }));
     } else {
       setFormData(prev => ({
         ...prev,

@@ -71,6 +71,11 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(env.VITE_FIREBASE_MESSAGING_SENDER_ID),
       'import.meta.env.VITE_FIREBASE_APP_ID': JSON.stringify(env.VITE_FIREBASE_APP_ID),
       'import.meta.env.VITE_FIREBASE_MEASUREMENT_ID': JSON.stringify(env.VITE_FIREBASE_MEASUREMENT_ID),
+      'import.meta.env.VITE_ABACATE_PAY_API_KEY': JSON.stringify(env.VITE_ABACATE_PAY_API_KEY),
+      'import.meta.env.VITE_ABACATE_PAY_API_URL': JSON.stringify(env.VITE_ABACATE_PAY_API_URL),
+      'import.meta.env.VITE_APP_NAME': JSON.stringify(env.VITE_APP_NAME),
+      'import.meta.env.VITE_APP_URL': JSON.stringify(env.VITE_APP_URL),
+      'import.meta.env.VITE_APP_ENV': JSON.stringify(env.VITE_APP_ENV)
     },
   };
 });

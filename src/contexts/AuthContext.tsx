@@ -3,6 +3,7 @@ import {
   User,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   AuthError
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
+        console.log('Auth state changed. User:', user); // Log do usuário
         setUser(user);
         setLoading(false);
       },
@@ -43,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setError(null);
       setLoading(true);
-      await auth.signInWithEmailAndPassword(email, password); // Use directly from the auth object
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       const authError = error as AuthError;
       console.error('Sign in error:', authError);

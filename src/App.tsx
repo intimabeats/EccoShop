@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { CircularProgress, Box, Typography } from '@mui/material';
+import { CircularProgress, Box, Typography, Alert } from '@mui/material';
 
 // Import theme and providers
 import { theme } from './theme';
@@ -20,6 +20,11 @@ import PaymentSuccess from './components/Checkout/PaymentSuccess';
 import ProductManagement from './components/Admin/ProductManagement';
 import OrderTracking from './components/Admin/OrderTracking';
 import Login from './components/Auth/Login';
+
+// New Admin Imports
+import AdminDashboard from './components/Admin/AdminDashboard';
+import AdminHome from './components/Admin/AdminHome';
+import UserManagement from './components/Admin/UserManagement';
 
 // Import DevMenu
 import { DevMenu } from './components/Common/DevMenu';
@@ -40,7 +45,30 @@ const LoadingFallback = () => (
 );
 
 const App: React.FC = () => {
-  console.log('App component rendering');
+  const [error, setError] = useState<string | null>(null);
+
+  // Capturar erros da inicialização do Firebase
+  useEffect(() => {
+    const handleFirebaseError = (event: ErrorEvent) => {
+      setError(event.error?.message || 'Erro na inicialização do Firebase');
+    };
+    window.addEventListener('error', handleFirebaseError);
+    return () => window.removeEventListener('error', handleFirebaseError);
+  }, []);
+
+  if (error) {
+    return (
+      <Box 
+        display="flex" 
+        flexDirection="column"
+        justifyContent="center" 
+        alignItems="center" 
+        height="100vh"
+      >
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
 
   return (
     <React.Suspense fallback={<LoadingFallback />}>
@@ -80,28 +108,15 @@ const App: React.FC = () => {
                         path="admin"
                         element={
                           <ProtectedRoute adminOnly>
-                            <Navigate to="/admin/products" replace />
+                            <AdminDashboard />
                           </ProtectedRoute>
                         }
-                      />
-                      
-                      <Route
-                        path="admin/products"
-                        element={
-                          <ProtectedRoute adminOnly>
-                            <ProductManagement />
-                          </ProtectedRoute>
-                        }
-                      />
-                      
-                      <Route
-                        path="admin/orders"
-                        element={
-                          <ProtectedRoute adminOnly>
-                            <OrderTracking />
-                          </ProtectedRoute>
-                        }
-                      />
+                      >
+                        <Route index element={<AdminHome />} />
+                        <Route path="products" element={<ProductManagement />} />
+                        <Route path="orders" element={<OrderTracking />} />
+                        <Route path="users" element={<UserManagement />} />
+                      </Route>
                     </Route>
                   </Routes>
                   

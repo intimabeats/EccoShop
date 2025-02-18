@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Alert, Snackbar, AlertColor } from '@mui/material';
+import { Alert, Snackbar, AlertColor, SnackbarCloseReason } from '@mui/material';
 
 interface NotificationContextType {
   showNotification: (message: string, type?: AlertColor) => void;
@@ -18,7 +18,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setOpen(true);
   };
 
-  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleClose = (_event: React.SyntheticEvent | Event, reason?: SnackbarCloseReason) => { // Renomeado para _event
     if (reason === 'clickaway') {
       return;
     }

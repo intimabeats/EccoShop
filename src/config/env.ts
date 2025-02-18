@@ -9,8 +9,8 @@ const env = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
   },
   abacatePay: {
-    apiKey: import.meta.env.VITE_ABACATE_PAY_API_KEY,
-    apiUrl: import.meta.env.VITE_ABACATE_PAY_API_URL,
+    apiKey: import.meta.env.VITE_ABACATE_PAY_API_KEY || 'abc_dev_YbKKCjdDYEEERyTFFPRSkjty',
+    apiUrl: import.meta.env.VITE_ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1',
   },
   app: {
     name: import.meta.env.VITE_APP_NAME,

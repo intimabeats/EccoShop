@@ -1,13 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import {
-  getAuth,
   initializeAuth,
   browserLocalPersistence,
   browserPopupRedirectResolver,
   Auth,
 } from 'firebase/auth';
 import {
-  getFirestore,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
@@ -53,6 +51,8 @@ try {
 
 } catch (error) {
     console.error('Error initializing Firebase:', error);
+    // Adicione tratamento de erro mais robusto aqui, se necessário
+    throw error; // Re-throw para que o erro seja capturado em outros lugares
 }
 
 // Função de verificação de rede

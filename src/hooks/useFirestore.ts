@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   collection,
   query,
-  orderBy,
-  limit,
   getDocs,
   QueryConstraint,
   DocumentData,

@@ -7,7 +7,6 @@ import {
   InputAdornment,
   MenuItem,
   Skeleton,
-  useTheme,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { collection, getDocs } from 'firebase/firestore';
@@ -22,7 +21,6 @@ const ProductList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
   const { addItem } = useCart();
-  const theme = useTheme();
 
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -35,6 +33,8 @@ const ProductList: React.FC = () => {
           ...doc.data(),
         })) as Product[];
 
+        console.log('Products loaded:', productsData); // Log dos produtos
+
         setProducts(productsData);
 
         // Extract unique categories
@@ -42,6 +42,7 @@ const ProductList: React.FC = () => {
         setCategories(uniqueCategories);
       } catch (error) {
         console.error('Error loading products:', error);
+        setLoading(false); // Garantir que o loading seja desativado em caso de erro
       } finally {
         setLoading(false);
       }

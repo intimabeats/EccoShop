@@ -1,7 +1,9 @@
-import axios from 'axios';
 
-const API_BASE_URL = 'https://api.abacatepay.com/v1';
-const API_KEY = 'abc_dev_YbKKCjdDYEEERyTFFPRSkjty';
+import axios from 'axios';
+import { env } from '../config/env';
+
+const API_BASE_URL = env.abacatePay.apiUrl;
+const API_KEY = env.abacatePay.apiKey;
 
 const abacatePayApi = axios.create({
   baseURL: API_BASE_URL,
@@ -18,16 +20,18 @@ export interface CustomerCreate {
   taxId: string;
 }
 
+export interface ProductBilling {
+  externalId: string;
+  name: string;
+  description: string;
+  quantity: number;
+  price: number;
+}
+
 export interface BillingCreate {
   frequency: 'ONE_TIME';
   methods: ['PIX'];
-  products: Array<{
-    externalId: string;
-    name: string;
-    description?: string;
-    quantity: number;
-    price: number;
-  }>;
+  products: ProductBilling[];
   returnUrl: string;
   completionUrl: string;
   customerId?: string;
@@ -36,23 +40,69 @@ export interface BillingCreate {
 
 export const abacatePayService = {
   createCustomer: async (customer: CustomerCreate) => {
-    const response = await abacatePayApi.post('/customer/create', customer);
-    return response.data;
+    try {
+      // Garantir tipos serializáveis
+      const sanitizedCustomer = {
+        name: String(customer.name),
+        cellphone: String(customer.cellphone),
+        email: String(customer.email),
+        taxId: String(customer.taxId)
+      };
+
+      const response = await abacatePayApi.post('/customer/create', sanitizedCustomer);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      throw error;
+    }
   },
 
   createBilling: async (billing: BillingCreate) => {
-    const response = await abacatePayApi.post('/billing/create', billing);
-    return response.data;
+    try {
+      // Garantir tipos serializáveis
+      const sanitizedBilling = {
+        ...billing,
+        products: billing.products.map(product => ({
+          externalId: String(product.externalId),
+          name: String(product.name),
+          description: String(product.description || ''),
+          quantity: Number(product.quantity),
+          price: Number(product.price)
+        })),
+        customer: billing.customer ? {
+          name: String(billing.customer.name),
+          cellphone: String(billing.customer.cellphone),
+          email: String(billing.customer.email),
+          taxId: String(billing.customer.taxId)
+        } : undefined
+      };
+
+      const response = await abacatePayApi.post('/billing/create', sanitizedBilling);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating billing:', error);
+      throw error;
+    }
   },
 
   listCustomers: async () => {
-    const response = await abacatePayApi.get('/customer/list');
-    return response.data;
+    try {
+      const response = await abacatePayApi.get('/customer/list');
+      return response.data;
+    } catch (error) {
+      console.error('Error listing customers:', error);
+      throw error;
+    }
   },
 
   listBillings: async () => {
-    const response = await abacatePayApi.get('/billing/list');
-    return response.data;
+    try {
+      const response = await abacatePayApi.get('/billing/list');
+      return response.data;
+    } catch (error) {
+      console.error('Error listing billings:', error);
+      throw error;
+    }
   }
 };
 

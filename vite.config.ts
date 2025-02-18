@@ -1,8 +1,8 @@
+
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Carregar variáveis de ambiente
   const env = loadEnv(mode, process.cwd(), '');
@@ -50,32 +50,11 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
-    build: {
-      sourcemap: true,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            mui: ['@mui/material', '@mui/icons-material'],
-            firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          },
-        },
-      },
-    },
-    // Definir variáveis de ambiente explicitamente
     define: {
+      // Definir variáveis de ambiente globalmente
       'import.meta.env.VITE_FIREBASE_API_KEY': JSON.stringify(env.VITE_FIREBASE_API_KEY),
       'import.meta.env.VITE_FIREBASE_AUTH_DOMAIN': JSON.stringify(env.VITE_FIREBASE_AUTH_DOMAIN),
-      'import.meta.env.VITE_FIREBASE_PROJECT_ID': JSON.stringify(env.VITE_FIREBASE_PROJECT_ID),
-      'import.meta.env.VITE_FIREBASE_STORAGE_BUCKET': JSON.stringify(env.VITE_FIREBASE_STORAGE_BUCKET),
-      'import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(env.VITE_FIREBASE_MESSAGING_SENDER_ID),
-      'import.meta.env.VITE_FIREBASE_APP_ID': JSON.stringify(env.VITE_FIREBASE_APP_ID),
-      'import.meta.env.VITE_FIREBASE_MEASUREMENT_ID': JSON.stringify(env.VITE_FIREBASE_MEASUREMENT_ID),
-      'import.meta.env.VITE_ABACATE_PAY_API_KEY': JSON.stringify(env.VITE_ABACATE_PAY_API_KEY),
-      'import.meta.env.VITE_ABACATE_PAY_API_URL': JSON.stringify(env.VITE_ABACATE_PAY_API_URL),
-      'import.meta.env.VITE_APP_NAME': JSON.stringify(env.VITE_APP_NAME),
-      'import.meta.env.VITE_APP_URL': JSON.stringify(env.VITE_APP_URL),
-      'import.meta.env.VITE_APP_ENV': JSON.stringify(env.VITE_APP_ENV)
+      // ... outras variáveis de ambiente
     },
   };
 });

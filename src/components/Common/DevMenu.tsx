@@ -16,17 +16,20 @@ import {
   AdminPanelSettings as AdminIcon,
   Login as LoginIcon,
   CheckCircle as SuccessIcon,
-  Payment as PaymentIcon, // Import PaymentIcon
+  Dashboard as DashboardIcon,
+  People as UsersIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const devRoutes = [
   { path: '/', label: 'Loja', icon: <StoreIcon /> },
   { path: '/login', label: 'Login', icon: <LoginIcon /> },
-  { path: '/checkout', label: 'Checkout', icon: <PaymentIcon /> },
+  { path: '/checkout', label: 'Checkout', icon: <CartIcon /> },
   { path: '/success', label: 'Pagamento Concluído', icon: <SuccessIcon /> },
+  { path: '/admin', label: 'Dashboard Admin', icon: <DashboardIcon /> },
   { path: '/admin/products', label: 'Gerenciar Produtos', icon: <AdminIcon /> },
   { path: '/admin/orders', label: 'Acompanhar Pedidos', icon: <CartIcon /> },
+  { path: '/admin/users', label: 'Gerenciar Usuários', icon: <UsersIcon /> },
 ];
 
 export const DevMenu: React.FC = () => {

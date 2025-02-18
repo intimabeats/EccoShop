@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { CircularProgress, Box, Typography, Alert } from '@mui/material';
+import { 
+  CircularProgress, 
+  Box, 
+  Typography, 
+  Alert 
+} from '@mui/material';
 
 // Import theme and providers
 import { theme } from './theme';
@@ -87,11 +92,7 @@ const App: React.FC = () => {
                       
                       <Route
                         path="checkout"
-                        element={
-                          <ProtectedRoute>
-                            <CheckoutForm />
-                          </ProtectedRoute>
-                        }
+                        element={<CheckoutForm />}
                       />
                       
                       <Route

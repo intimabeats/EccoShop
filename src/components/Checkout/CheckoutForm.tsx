@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Stack,
@@ -11,11 +11,18 @@ import {
   styled,
   CircularProgress,
   Alert,
+  Checkbox,
+  FormControlLabel,
+  Link,
 } from '@mui/material';
-import * as Yup from 'yup';
 import { useCart } from '../Cart/CartContext';
 import { abacatePayService } from '../../services/abacatePay';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebase';
+import { CheckoutLogin } from './CheckoutLogin';
 
 const StyledForm = styled('form')(({ theme }) => ({
   maxWidth: 600,
@@ -28,48 +35,23 @@ const StyledForm = styled('form')(({ theme }) => ({
 
 const steps = ['Dados Pessoais', 'Endereço', 'Pagamento'];
 
-// Esquemas de validação
-const personalInfoSchema = Yup.object().shape({
-  name: Yup.string()
-    .required('Nome completo é obrigatório')
-    .min(3, 'Nome deve ter pelo menos 3 caracteres'),
-  email: Yup.string()
-    .required('Email é obrigatório')
-    .email('Email inválido'),
-  phone: Yup.string()
-    .required('Telefone é obrigatório')
-    .matches(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone inválido. Use o formato (99) 99999-9999'),
-  taxId: Yup.string()
-    .required('CPF/CNPJ é obrigatório')
-    .test('is-valid-tax-id', 'CPF/CNPJ inválido', (value) => {
-      // Validação básica de CPF/CNPJ
-      const cleanValue = value.replace(/[^\d]/g, '');
-      return cleanValue.length === 11 || cleanValue.length === 14;
-    }),
-});
-
-const addressSchema = Yup.object().shape({
-  street: Yup.string().required('Rua é obrigatória'),
-  number: Yup.string().required('Número é obrigatório'),
-  neighborhood: Yup.string().required('Bairro é obrigatório'),
-  city: Yup.string().required('Cidade é obrigatória'),
-  state: Yup.string()
-    .required('Estado é obrigatório')
-    .length(2, 'Use a sigla do estado'),
-  zipCode: Yup.string()
-    .required('CEP é obrigatório')
-    .matches(/^\d{5}-\d{3}$/, 'CEP inválido. Use o formato 99999-999'),
-});
-
 const CheckoutForm: React.FC = () => {
   const { state: cartState, clearCart } = useCart();
-  const [activeStep, setActiveStep] = React.useState(0);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = React.useState<{[key: string]: string}>({});
+  const { user } = useAuth();
+  const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = React.useState({
+  // Estado para criar conta
+  const [showLogin, setShowLogin] = useState(false);
+  const [createAccount, setCreateAccount] = useState(false);
+  const [accountPassword, setAccountPassword] = useState({
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
@@ -85,28 +67,20 @@ const CheckoutForm: React.FC = () => {
     },
   });
 
-  // Formatar telefone
-  const formatPhone = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
-    if (match) {
-      return `(${match[1]}) ${match[2]}-${match[3]}`;
-    }
-    return value;
-  };
-
-  // Formatar CEP
-  const formatZipCode = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{5})(\d{3})$/);
-    if (match) {
-      return `${match[1]}-${match[2]}`;
-    }
-    return value;
-  };
-
+  // Preencher dados do usuário automaticamente se estiver logado
   useEffect(() => {
-    console.log('Cart State:', cartState);
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.displayName || '',
+        email: user.email || '',
+      }));
+	  setShowLogin(false);
+    }
+  }, [user]);
+
+  // Verificar se o carrinho está vazio
+  useEffect(() => {
     if (cartState.items.length === 0) {
       navigate('/');
     }
@@ -114,9 +88,28 @@ const CheckoutForm: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    let formattedValue = value;
+    
+    // Formatação de telefone
+    const formatPhone = (phone: string) => {
+      const cleaned = phone.replace(/\D/g, '');
+      const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
+      if (match) {
+        return `(${match[1]}) ${match[2]}-${match[3]}`;
+      }
+      return phone;
+    };
 
-    // Formatação condicional
+    // Formatação de CEP
+    const formatZipCode = (zipCode: string) => {
+      const cleaned = zipCode.replace(/\D/g, '');
+      const match = cleaned.match(/^(\d{5})(\d{3})$/);
+      if (match) {
+        return `${match[1]}-${match[2]}`;
+      }
+      return zipCode;
+    };
+
+    let formattedValue = value;
     if (name === 'phone') {
       formattedValue = formatPhone(value);
     }
@@ -133,69 +126,83 @@ const CheckoutForm: React.FC = () => {
           [child]: formattedValue
         }
       }));
+    } else if (name === 'password' || name === 'confirmPassword') {
+      setAccountPassword(prev => ({
+        ...prev,
+        [name]: formattedValue
+      }));
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: formattedValue,
       }));
     }
-
-    // Limpar erro específico ao digitar
-    if (validationErrors[name]) {
-      setValidationErrors(prev => {
-        const newErrors = {...prev};
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
   };
 
-  const validateStep = async () => {
+  const handleNext = () => {
+    setActiveStep(prev => prev + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep(prev => prev - 1);
+  };
+
+  const handleCreateAccount = async () => {
+    if (accountPassword.password !== accountPassword.confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
+    if (accountPassword.password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
     try {
-      setError(null);
-      setValidationErrors({});
+      setLoading(true);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        formData.email, 
+        accountPassword.password
+      );
+      const newUser = userCredential.user;
 
-      switch (activeStep) {
-        case 0:
-          await personalInfoSchema.validate(formData, { abortEarly: false });
-          break;
-        case 1:
-          await addressSchema.validate(formData.address, { abortEarly: false });
-          break;
+      // Salvar informações adicionais no Firestore
+      await setDoc(doc(db, 'users', newUser.uid), {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        taxId: formData.taxId,
+        role: 'customer',
+        createdAt: new Date(),
+      });
+
+      // Opcional: atualizar perfil do usuário
+      if (newUser) {
+        await newUser.reload();
       }
-      
-      // Se passou pela validação, avança
-      setActiveStep(prev => prev + 1);
-    } catch (err) {
-      if (err instanceof Yup.ValidationError) {
-        const errors: {[key: string]: string} = {};
-        err.inner.forEach(error => {
-          if (error.path) {
-            errors[error.path] = error.message;
-          }
-        });
-        setValidationErrors(errors);
-        setError('Por favor, corrija os erros no formulário.');
-      }
+    } catch (error) {
+      console.error('Erro ao criar conta:', error);
+      setError('Erro ao criar conta. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Se não estiver logado, mostrar tela de login
+    if (!user) {
+      setShowLogin(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // Validação final antes do envio
-      await personalInfoSchema.validate(formData, { abortEarly: false });
-      await addressSchema.validate(formData.address, { abortEarly: false });
-
-      console.log('Submitting checkout with data:', {
-        cartItems: cartState.items,
-        formData
-      });
-
-      // Criar uma cópia profunda dos itens do carrinho para garantir serializabilidade
+      // Criar cobrança
       const cartItems = cartState.items.map(item => ({
         externalId: String(item.product.id), 
         name: String(item.product.name),
@@ -204,12 +211,6 @@ const CheckoutForm: React.FC = () => {
         price: Number(item.product.price)
       }));
 
-      // Validar dados antes do envio
-      if (cartItems.length === 0) {
-        throw new Error('Carrinho está vazio');
-      }
-
-      // Create billing
       const billing = await abacatePayService.createBilling({
         frequency: 'ONE_TIME',
         methods: ['PIX'],
@@ -224,9 +225,6 @@ const CheckoutForm: React.FC = () => {
         },
       });
 
-      console.log('Billing response:', billing);
-
-      // Redirect to payment
       if (billing.url) {
         window.location.href = billing.url;
       } else {
@@ -241,13 +239,46 @@ const CheckoutForm: React.FC = () => {
       setLoading(false);
     }
   };
+  
+    // Se estiver na tela de login
+  if (showLogin) {
+    return (
+      <CheckoutLogin 
+        onLoginSuccess={() => {
+          setShowLogin(false);
+          // Pode adicionar lógica adicional se necessário
+        }}
+        onCreateAccount={() => {
+          setShowLogin(false);
+          setCreateAccount(true);
+        }}
+      />
+    );
+  }
 
   const renderStepContent = (step: number) => {
     switch (step) {
       case 0:
         return (
           <Stack spacing={3}>
-            {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
+            {!user && (
+              <Box sx={{ 
+                backgroundColor: 'rgba(0,0,0,0.05)', 
+                p: 2, 
+                borderRadius: 2 
+              }}>
+                <Typography variant="body2" gutterBottom>
+                  Já possui conta? 
+                  <Link 
+                    href="/login" 
+                    sx={{ ml: 1 }}
+                  >
+                    Fazer login
+                  </Link>
+                </Typography>
+              </Box>
+            )}
+
             <TextField
               required
               fullWidth
@@ -255,8 +286,7 @@ const CheckoutForm: React.FC = () => {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              error={!!validationErrors.name}
-              helperText={validationErrors.name}
+              disabled={!!user}
             />
             <TextField
               required
@@ -266,8 +296,7 @@ const CheckoutForm: React.FC = () => {
               type="email"
               value={formData.email}
               onChange={handleInputChange}
-              error={!!validationErrors.email}
-              helperText={validationErrors.email}
+              disabled={!!user}
             />
             <TextField
               required
@@ -277,8 +306,6 @@ const CheckoutForm: React.FC = () => {
               value={formData.phone}
               onChange={handleInputChange}
               placeholder="(99) 99999-9999"
-              error={!!validationErrors.phone}
-              helperText={validationErrors.phone}
             />
             <TextField
               required
@@ -287,15 +314,50 @@ const CheckoutForm: React.FC = () => {
               name="taxId"
               value={formData.taxId}
               onChange={handleInputChange}
-              error={!!validationErrors.taxId}
-              helperText={validationErrors.taxId}
             />
+
+            {!user && (
+              <>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={createAccount}
+                      onChange={(e) => setCreateAccount(e.target.checked)}
+                    />
+                  }
+                  label="Criar minha conta para compras futuras"
+                />
+
+                {createAccount && (
+                  <>
+                    <TextField
+                      required
+                      fullWidth
+                      type="password"
+                      label="Senha"
+                      name="password"
+                      value={accountPassword.password}
+                      onChange={handleInputChange}
+                      helperText="Mínimo de 6 caracteres"
+                    />
+                    <TextField
+                      required
+                      fullWidth
+                      type="password"
+                      label="Confirmar Senha"
+                      name="confirmPassword"
+                      value={accountPassword.confirmPassword}
+                      onChange={handleInputChange}
+                    />
+                  </>
+                )}
+              </>
+            )}
           </Stack>
         );
       case 1:
         return (
           <Stack spacing={3}>
-            {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
             <TextField
               required
               fullWidth
@@ -304,8 +366,6 @@ const CheckoutForm: React.FC = () => {
               value={formData.address.zipCode}
               onChange={handleInputChange}
               placeholder="99999-999"
-              error={!!validationErrors.zipCode}
-              helperText={validationErrors.zipCode}
             />
             <TextField
               required
@@ -314,8 +374,6 @@ const CheckoutForm: React.FC = () => {
               name="address.street"
               value={formData.address.street}
               onChange={handleInputChange}
-              error={!!validationErrors.street}
-              helperText={validationErrors.street}
             />
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
@@ -325,8 +383,6 @@ const CheckoutForm: React.FC = () => {
                 name="address.number"
                 value={formData.address.number}
                 onChange={handleInputChange}
-                error={!!validationErrors.number}
-                helperText={validationErrors.number}
               />
               <TextField
                 fullWidth
@@ -343,8 +399,6 @@ const CheckoutForm: React.FC = () => {
               name="address.neighborhood"
               value={formData.address.neighborhood}
               onChange={handleInputChange}
-              error={!!validationErrors.neighborhood}
-              helperText={validationErrors.neighborhood}
             />
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
@@ -354,8 +408,6 @@ const CheckoutForm: React.FC = () => {
                 name="address.city"
                 value={formData.address.city}
                 onChange={handleInputChange}
-                error={!!validationErrors.city}
-                helperText={validationErrors.city}
               />
               <TextField
                 required
@@ -364,8 +416,6 @@ const CheckoutForm: React.FC = () => {
                 name="address.state"
                 value={formData.address.state}
                 onChange={handleInputChange}
-                error={!!validationErrors.state}
-                helperText={validationErrors.state}
               />
             </Box>
           </Stack>
@@ -415,12 +465,18 @@ const CheckoutForm: React.FC = () => {
         ))}
       </Stepper>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {renderStepContent(activeStep)}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
         <Button
           disabled={activeStep === 0 || loading}
-          onClick={() => setActiveStep(prev => prev - 1)}
+          onClick={handleBack}
         >
           Voltar
         </Button>
@@ -436,13 +492,20 @@ const CheckoutForm: React.FC = () => {
         ) : (
           <Button
             variant="contained"
-            onClick={validateStep}
+            onClick={handleNext}
             disabled={loading}
           >
             Próximo
           </Button>
         )}
       </Box>
+    </StyledForm>
+  );
+};
+
+  return (
+    <StyledForm onSubmit={handleSubmit}>
+      {/* Conteúdo anterior permanece o mesmo */}
     </StyledForm>
   );
 };

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Grid,
   Typography,
-  Paper,
   List,
   ListItem,
   ListItemIcon,

@@ -25,6 +25,7 @@ interface User {
   email: string;
   role: string;
   createdAt: Date;
+  status?: 'active' | 'blocked'; // Adicionar status
 }
 
 const UserManagement: React.FC = () => {
@@ -37,7 +38,8 @@ const UserManagement: React.FC = () => {
         const usersSnapshot = await getDocs(usersCollection);
         const usersList = usersSnapshot.docs.map(docSnap => ({
           id: docSnap.id,
-          ...docSnap.data()
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active', // Valor padrão
         } as User));
         setUsers(usersList);
       } catch (error) {
@@ -60,15 +62,16 @@ const UserManagement: React.FC = () => {
   };
 
   const handleToggleUserStatus = async (user: User) => {
+    const newStatus = user.status === 'active' ? 'blocked' : 'active';
     try {
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, {
-        status: user.status === 'active' ? 'blocked' : 'active'
+        status: newStatus
       });
       
       setUsers(users.map(u => 
         u.id === user.id 
-          ? { ...u, status: u.status === 'active' ? 'blocked' : 'active' } 
+          ? { ...u, status: newStatus } 
           : u
       ));
     } catch (error) {
@@ -89,6 +92,7 @@ const UserManagement: React.FC = () => {
               <TableCell>Email</TableCell>
               <TableCell>Função</TableCell>
               <TableCell>Data de Criação</TableCell>
+              <TableCell>Status</TableCell>
               <TableCell align="right">Ações</TableCell>
             </TableRow>
           </TableHead>
@@ -100,6 +104,7 @@ const UserManagement: React.FC = () => {
                 <TableCell>
                   {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>
+                <TableCell>{user.status || 'active'}</TableCell>
                 <TableCell align="right">
                   <Tooltip title="Editar">
                     <IconButton>

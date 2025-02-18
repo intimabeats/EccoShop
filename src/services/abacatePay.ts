@@ -1,8 +1,7 @@
-
 import axios from 'axios';
 import { env } from '../config/env';
 
-const API_BASE_URL = env.abacatePay.apiUrl;
+const API_BASE_URL = '/abacatepay'; // Sem a URL completa
 const API_KEY = env.abacatePay.apiKey;
 
 const abacatePayApi = axios.create({

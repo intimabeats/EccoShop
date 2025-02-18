@@ -43,7 +43,7 @@ const CheckoutForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Estado para criar conta
+  // Estado para login e criação de conta
   const [showLogin, setShowLogin] = useState(false);
   const [createAccount, setCreateAccount] = useState(false);
   const [accountPassword, setAccountPassword] = useState({
@@ -75,7 +75,7 @@ const CheckoutForm: React.FC = () => {
         name: user.displayName || '',
         email: user.email || '',
       }));
-	  setShowLogin(false);
+      setShowLogin(false);
     }
   }, [user]);
 
@@ -140,7 +140,11 @@ const CheckoutForm: React.FC = () => {
   };
 
   const handleNext = () => {
-    setActiveStep(prev => prev + 1);
+    if (activeStep === 0 && !user && createAccount) {
+      handleCreateAccount();
+    } else {
+      setActiveStep(prev => prev + 1);
+    }
   };
 
   const handleBack = () => {
@@ -181,6 +185,8 @@ const CheckoutForm: React.FC = () => {
       if (newUser) {
         await newUser.reload();
       }
+      
+      setActiveStep(prev => prev + 1);
     } catch (error) {
       console.error('Erro ao criar conta:', error);
       setError('Erro ao criar conta. Tente novamente.');
@@ -189,7 +195,7 @@ const CheckoutForm: React.FC = () => {
     }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Se não estiver logado, mostrar tela de login
@@ -239,14 +245,13 @@ const handleSubmit = async (e: React.FormEvent) => {
       setLoading(false);
     }
   };
-  
-    // Se estiver na tela de login
+
+  // Se estiver na tela de login
   if (showLogin) {
     return (
       <CheckoutLogin 
         onLoginSuccess={() => {
           setShowLogin(false);
-          // Pode adicionar lógica adicional se necessário
         }}
         onCreateAccount={() => {
           setShowLogin(false);
@@ -499,13 +504,6 @@ const handleSubmit = async (e: React.FormEvent) => {
           </Button>
         )}
       </Box>
-    </StyledForm>
-  );
-};
-
-  return (
-    <StyledForm onSubmit={handleSubmit}>
-      {/* Conteúdo anterior permanece o mesmo */}
     </StyledForm>
   );
 };

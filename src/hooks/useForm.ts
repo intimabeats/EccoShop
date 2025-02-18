@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 
 interface ValidationRules {
@@ -66,11 +65,9 @@ export function useForm<T extends { [key: string]: any }>(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
       setValues(prev => ({ ...prev, [name]: value }));
-      
-      if (touched[name]) {
-        const error = validateField(name, value);
-        setErrors(prev => ({ ...prev, [name]: error }));
-      }
+      setTouched({ ...touched, [name]: true }); // Atualizar touched ao mudar
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
     },
     [touched, validateField]
   );
@@ -89,13 +86,13 @@ export function useForm<T extends { [key: string]: any }>(
     const newErrors: ValidationErrors = {};
     let isValid = true;
 
-    Object.keys(values).forEach(key => {
+    for (const key in values) {
       const error = validateField(key, values[key]);
       if (error) {
         newErrors[key] = error;
         isValid = false;
       }
-    });
+    }
 
     setErrors(newErrors);
     return isValid;
@@ -118,13 +115,3 @@ export function useForm<T extends { [key: string]: any }>(
     setValues,
   };
 }
-
-</boltArtifact>
-</boltArtifact>
-
-Principais mudanças:
-1. Mantida a implementação original do hook
-2. Garantido que todos os métodos estejam corretos
-3. Adicionado tipagem adequada
-
-Agora, rode `npm run build` novamente. Se ainda houver erros, por favor, compartilhe os detalhes específicos.
